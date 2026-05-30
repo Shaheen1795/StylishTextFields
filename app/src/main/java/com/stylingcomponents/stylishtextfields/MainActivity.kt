@@ -64,6 +64,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -89,19 +90,34 @@ import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.stylingcomponents.stylishtextfields.cursors.AuroraCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.FireCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.GlitchCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.IceCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.MatrixCursorRenderer
+import com.stylingcomponents.stylishtextfields.interfaces.TextFieldParticleEffect
+import com.stylingcomponents.stylishtextfields.models.SpillParticle
+import com.stylingcomponents.stylishtextfields.ripples.RippleBorderTextField
+import com.stylingcomponents.stylishtextfields.shimmereffects.GalaxyEffect
+import com.stylingcomponents.stylishtextfields.shimmereffects.LightningEffect
+import com.stylingcomponents.stylishtextfields.shimmereffects.LiquidMetalEffect
+import com.stylingcomponents.stylishtextfields.shimmereffects.NebulaEffect
+import com.stylingcomponents.stylishtextfields.shimmereffects.ShimmerSpillTextField
 import com.stylingcomponents.stylishtextfields.trailrenderers.ShimmerTrailRenderer
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -110,7 +126,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             StylishTextFieldsTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                   PreviewScreen()
+                    RippleBorderPreview()
                 }
             }
         }
@@ -263,18 +279,10 @@ fun DemoScreen() {
         modifier = Modifier
             .background(Color(0xFF050505))
             .padding(20.dp)
+            .fillMaxSize()
     ) {
 
-        NeonTextField(
-
-            state = state,
-
-            cursorRenderer = cursorRenderer,
-
-            ShimmerTrailRenderer(),
-
-            hint = "Cyberpunk Input"
-        )
+        ShimmerSpillTextField()
     }
 }
 
@@ -394,5 +402,196 @@ fun PreviewScreen() {
                 Text("Glitch")
             }
         }
+    }
+}
+
+@Composable
+fun EffectPreviewTextField(
+    title: String,
+    effect: TextFieldParticleEffect
+) {
+
+    val state =
+        rememberTextFieldState()
+
+    val particles =
+        remember {
+            ParticleFactory.createParticles()
+        }
+
+    val infinite =
+        rememberInfiniteTransition(
+            label = ""
+        )
+
+    val progress by infinite.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1600,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = ""
+    )
+
+    Column {
+
+        Text(
+            text = title,
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(68.dp)
+                .clip(
+                    RoundedCornerShape(20.dp)
+                )
+                .background(
+                    Color(0xFF121212)
+                )
+        ) {
+
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+            ) {
+
+                effect.draw(
+                    scope = this,
+                    progress = progress,
+                    particles = particles
+                )
+            }
+
+            BasicTextField(
+                state = state,
+                textStyle = TextStyle(
+                    color = Color.White
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 20.dp
+                    ),
+                decorator = {
+
+                    Box(
+                        contentAlignment =
+                            Alignment.CenterStart
+                    ) {
+
+                        if (state.text.isEmpty()) {
+
+                            Text(
+                                text = "Type here...",
+                                color = Color.Gray
+                            )
+                        }
+
+                        it()
+                    }
+                }
+            )
+        }
+    }
+}
+
+// =======================================================
+// PREVIEW
+// =======================================================
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFF000000
+)
+@Composable
+fun TextFieldEffectsPreview() {
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(20.dp),
+        verticalArrangement =
+            Arrangement.spacedBy(24.dp)
+    ) {
+
+        EffectPreviewTextField(
+            title = "Galaxy Effect",
+            effect = GalaxyEffect()
+        )
+
+        EffectPreviewTextField(
+            title = "Nebula Effect",
+            effect = NebulaEffect()
+        )
+
+        EffectPreviewTextField(
+            title = "Liquid Metal Effect",
+            effect = LiquidMetalEffect()
+        )
+
+        EffectPreviewTextField(
+            title = "Lightning Effect",
+            effect = LightningEffect()
+        )
+    }
+}
+
+object ParticleFactory {
+
+    fun createParticles(): List<SpillParticle> {
+
+        return buildList {
+
+            repeat(40) {
+
+                val angle =
+                    Random.nextFloat() * 360f
+
+                val speed =
+                    Random.nextFloat() * 8f + 2f
+
+                add(
+                    SpillParticle(
+                        id = it,
+                        x = 0f,
+                        y = 0f,
+                        radius = Random.nextFloat() * 8f + 2f,
+                        velocityX = cos(angle) * speed,
+                        velocityY = sin(angle) * speed,
+                        alpha = 1f
+                    )
+                )
+            }
+        }
+    }
+}
+
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFF000000
+)
+@Composable
+fun RippleBorderPreview() {
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black),
+        contentAlignment = Alignment.Center
+    ) {
+
+        RippleBorderTextField()
     }
 }
