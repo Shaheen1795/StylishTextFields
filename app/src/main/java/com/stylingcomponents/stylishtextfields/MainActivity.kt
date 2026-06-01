@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -97,6 +98,7 @@ import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.draw.clip
@@ -106,9 +108,17 @@ import com.stylingcomponents.stylishtextfields.cursors.FireCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.GlitchCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.IceCursorRenderer
 import com.stylingcomponents.stylishtextfields.cursors.MatrixCursorRenderer
+import com.stylingcomponents.stylishtextfields.interfaces.BorderEffect
 import com.stylingcomponents.stylishtextfields.interfaces.TextFieldParticleEffect
+import com.stylingcomponents.stylishtextfields.models.EffectParticle
 import com.stylingcomponents.stylishtextfields.models.SpillParticle
-import com.stylingcomponents.stylishtextfields.ripples.RippleBorderTextField
+import com.stylingcomponents.stylishtextfields.ripples.AuroraPulseBorderEffect
+import com.stylingcomponents.stylishtextfields.ripples.LiquidRippleBorderEffect
+import com.stylingcomponents.stylishtextfields.ripples.NeonPlasmaBorderEffect
+import com.stylingcomponents.stylishtextfields.ripples.ParticleRippleBorderEffect
+import com.stylingcomponents.stylishtextfields.ripples.ShaderEnergyBorderEffect
+import com.stylingcomponents.stylishtextfields.ripples.ShockwaveBorderEffect
+import com.stylingcomponents.stylishtextfields.ripples.WaterRippleBorderEffect
 import com.stylingcomponents.stylishtextfields.shimmereffects.GalaxyEffect
 import com.stylingcomponents.stylishtextfields.shimmereffects.LightningEffect
 import com.stylingcomponents.stylishtextfields.shimmereffects.LiquidMetalEffect
@@ -126,7 +136,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             StylishTextFieldsTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    RippleBorderPreview()
+                    SmartReactiveTextFieldPreview()
                 }
             }
         }
@@ -592,6 +602,218 @@ fun RippleBorderPreview() {
         contentAlignment = Alignment.Center
     ) {
 
-        RippleBorderTextField()
     }
 }
+
+
+
+
+// =====================================================
+// PARTICLE FACTORY
+// =====================================================
+
+object EffectParticleFactory {
+
+    fun createParticles(): List<EffectParticle> {
+
+        return buildList {
+
+            repeat(50) {
+
+                val angle = Random.nextFloat() * 360f
+                val speed = Random.nextFloat() * 10f + 2f
+
+                add(
+                    EffectParticle(
+                        radius = Random.nextFloat() * 8f + 2f,
+                        velocityX = cos(angle) * speed,
+                        velocityY = sin(angle) * speed
+                    )
+                )
+            }
+        }
+    }
+}
+
+// =====================================================
+// EFFECT ITEM
+// =====================================================
+
+@Composable
+fun EffectPreviewItem(
+    title: String,
+    effect: BorderEffect
+) {
+
+    val state = rememberTextFieldState()
+
+    var oldText by remember {
+        mutableStateOf("")
+    }
+
+    val particles = remember {
+        EffectParticleFactory.createParticles()
+    }
+
+    val animation =
+        remember {
+            Animatable(1f)
+        }
+
+    LaunchedEffect(state.text.toString()) {
+
+        val newText =
+            state.text.toString()
+
+        if (newText != oldText) {
+
+            oldText = newText
+
+            animation.snapTo(0f)
+
+            animation.animateTo(
+                1f,
+                tween(1200)
+            )
+        }
+    }
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+
+        Text(
+            text = title,
+            color = Color.White,
+            style = MaterialTheme.typography.titleMedium
+        )
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(70.dp)
+        ) {
+
+            // =========================================
+            // EFFECT LAYER
+            // =========================================
+
+            Canvas(
+                modifier = Modifier.matchParentSize()
+            ) {
+
+                effect.draw(
+                    scope = this,
+                    progress = animation.value,
+                    particles = particles
+                )
+            }
+
+            // =========================================
+            // TEXTFIELD
+            // =========================================
+
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .padding(3.dp)
+                    .clip(
+                        RoundedCornerShape(24.dp)
+                    )
+                    .background(
+                        Color(0xFF111111)
+                    )
+            ) {
+
+                BasicTextField(
+                    state = state,
+                    textStyle = TextStyle(
+                        color = Color.White
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            horizontal = 20.dp,
+                            vertical = 20.dp
+                        ),
+                    decorator = { innerTextField ->
+
+                        Box(
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+
+                            if (state.text.isEmpty()) {
+
+                                Text(
+                                    text = "Type here...",
+                                    color = Color.Gray
+                                )
+                            }
+
+                            innerTextField()
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+// =====================================================
+// MAIN PREVIEW
+// =====================================================
+
+@Preview(
+    showBackground = true,
+    backgroundColor = 0xFF000000,
+    showSystemUi = true
+)
+@Composable
+fun AllTextFieldEffectsPreview() {
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .padding(20.dp),
+
+        verticalArrangement = Arrangement.spacedBy(28.dp)
+    ) {
+
+        EffectPreviewItem(
+            title = "Water Ripple Border",
+            effect = WaterRippleBorderEffect()
+        )
+
+        EffectPreviewItem(
+            title = "Neon Plasma Ring",
+            effect = NeonPlasmaBorderEffect()
+        )
+
+        EffectPreviewItem(
+            title = "Liquid Ripple Distortion",
+            effect = LiquidRippleBorderEffect()
+        )
+
+        EffectPreviewItem(
+            title = "Shockwave Border",
+            effect = ShockwaveBorderEffect()
+        )
+
+        EffectPreviewItem(
+            title = "Aurora Pulse Border",
+            effect = AuroraPulseBorderEffect()
+        )
+
+        EffectPreviewItem(
+            title = "Particle Emitting Ripple",
+            effect = ParticleRippleBorderEffect()
+        )
+
+        EffectPreviewItem(
+            title = "Shader Energy Field",
+            effect = ShaderEnergyBorderEffect()
+        )
+    }
+}
+
